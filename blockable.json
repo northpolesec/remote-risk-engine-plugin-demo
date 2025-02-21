@@ -1,0 +1,99 @@
+{
+  "sha256": "0e37522030b718eef3cadcfd81095a0eda5625086866950976844b9023a5ad0d",
+  "cdhash": "412d9b365f6c86297f7df104876d375bcc107d58",
+  "signing_id": "JLMPQHK86H:com.culturedcode.ThingsMac",
+  "team_id": "JLMPQHK86H",
+  "file_name": "Things3",
+  "signedBy": {
+    "sha256": "27006496b3bd92c2341ed4289f705fe7ef6e7c684fcc4c66cb1a5c7acd98cd3a",
+    "commonName": "Apple Mac OS Application Signing",
+    "organization": "Apple Inc.",
+    "validFrom": "2024-07-12T23:16:07Z",
+    "valid_until": "2026-08-11T23:16:06Z",
+    "signedBy": "53fd008278e5a595fe1e908ae9c5e5675f26243264a5a6438c023e3ce2870760",
+    "firstSeen": "2025-02-21T02:54:58.370070Z"
+  },
+  "entitlements": [
+    {
+      "key": "com.apple.security.app-sandbox",
+      "value": "true"
+    },
+    {
+      "key": "com.apple.security.automation.apple-events",
+      "value": "true"
+    },
+    {
+      "key": "com.apple.security.network.client",
+      "value": "true"
+    },
+    {
+      "key": "com.apple.security.files.user-selected.read-write",
+      "value": "true"
+    },
+    {
+      "key": "com.apple.security.application-groups",
+      "value": "[\"JLMPQHK86H.com.culturedcode.ThingsMac\"]"
+    },
+    {
+      "key": "com.apple.security.personal-information.calendars",
+      "value": "true"
+    },
+    {
+      "key": "com.apple.developer.usernotifications.time-sensitive",
+      "value": "true"
+    },
+    {
+      "key": "com.apple.security.temporary-exception.shared-preference.read-write",
+      "value": "[\"com.culturedcode.ThingsMac.TodayWidget.shared\"]"
+    },
+    {
+      "key": "com.apple.security.print",
+      "value": "true"
+    },
+    {
+      "key": "com.apple.security.scripting-targets",
+      "value": "{\"com.apple.systempreferences\":[\"preferencepane.reveal\"],\"com.apple.iCal\":[\"com.apple.iCal.read-write\",\"com.apple.iCal.UI\"]}"
+    },
+    {
+      "key": "com.apple.security.temporary-exception.files.home-relative-path.read-write",
+      "value": "[\"\\/Library\\/Caches\\/Metadata\\/com.culturedcode.things\\/\"]"
+    },
+    {
+      "key": "com.apple.developer.aps-environment",
+      "value": "\"production\""
+    },
+    {
+      "key": "com.apple.security.network.server",
+      "value": "true"
+    },
+    {
+      "key": "com.apple.security.temporary-exception.files.home-relative-path.read-only",
+      "value": "[\"\\/Library\\/Containers\\/com.culturedcode.things\\/\",\"\\/Library\\/Preferences\\/com.culturedcode.things.plist\"]"
+    },
+    {
+      "key": "com.apple.security.files.downloads.read-write",
+      "value": "true"
+    },
+    {
+      "key": "com.apple.application-identifier",
+      "value": "\"JLMPQHK86H.com.culturedcode.ThingsMac\""
+    },
+    {
+      "key": "com.apple.security.files.bookmarks.app-scope",
+      "value": "true"
+    },
+    {
+      "key": "com.apple.developer.associated-domains",
+      "value": "[\"webcredentials:culturedcode.com\"]"
+    },
+    {
+      "key": "com.apple.developer.team-identifier",
+      "value": "\"JLMPQHK86H\""
+    },
+    {
+      "key": "com.apple.security.temporary-exception.apple-events",
+      "value": "[\"com.culturedcode.thingshelper\",\"com.culturedcode.ThingsMacSandboxHelper\",\"com.culturedcode.things\"]"
+    }
+  ],
+  "firstSeen": "2025-02-21T02:54:58.371912Z"
+}

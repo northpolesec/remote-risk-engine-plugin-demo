@@ -1,0 +1,279 @@
+syntax = "proto3";
+
+package workshop.v1;
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "sync/v1.proto";
+
+import public "workshop/v1/types.proto";
+
+option go_package = "workshop/v1;workshopv1";
+
+service WorkshopService {
+  rpc ListRules(ListRulesRequest) returns (ListRulesResponse) {
+    option (workshop.v1.permission) = {permission: "read:rules"};
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc CreateRule(CreateRuleRequest) returns (CreateRuleResponse) {
+    option (workshop.v1.permission) = {permission: "write:rules"};
+  }
+  rpc DeleteRule(DeleteRuleRequest) returns (DeleteRuleResponse) {
+    option (workshop.v1.permission) = {permission: "write:rules"};
+  }
+  rpc ListHosts(ListHostsRequest) returns (ListHostsResponse) {
+    option (workshop.v1.permission) = {permission: "read:hosts"};
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc UpdateHost(UpdateHostRequest) returns (UpdateHostResponse) {
+    option (workshop.v1.permission) = {permission: "write:hosts"};
+  }
+  rpc Push(PushRequest) returns (PushResponse) {
+    option (workshop.v1.permission) = {permission: "write:push"};
+  }
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {
+    option (workshop.v1.permission) = {permission: "read:events"};
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc ListBlockables(ListBlockablesRequest) returns (ListBlockablesResponse) {
+    option (workshop.v1.permission) = {permission: "read:blockables"};
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetOSVersionInfo(GetOSVersionInfoRequest) returns (GetOSVersionInfoResponse) {
+    option (workshop.v1.permission) = {permission: "read:status"};
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse) {
+    option (workshop.v1.permission) = {permission: "read:status"};
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse) {
+    option (workshop.v1.permission) = {permission: "read:apikeys"};
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse) {
+    option (workshop.v1.permission) = {permission: "write:apikeys"};
+  }
+  rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse) {
+    option (workshop.v1.permission) = {permission: "write:apikeys"};
+  }
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse) {
+    option (workshop.v1.permission) = {permission: "read:settings"};
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse) {
+    option (workshop.v1.permission) = {permission: "write:settings"};
+  }
+  rpc GetReport(GetReportRequest) returns (GetReportResponse) {
+    option (workshop.v1.permission) = {permission: "read:reports"};
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc CheckBlockable(CheckBlockableRequest) returns (CheckBlockableResponse) {
+    option (workshop.v1.permission) = {permission: "read:riskengineresults"};
+  }
+  rpc GetRiskEngineResults(GetRiskEngineResultsRequest) returns (GetRiskEngineResultsResponse) {
+    option (workshop.v1.permission) = {permission: "read:riskengineresults"};
+  }
+  rpc SCIMSync(SCIMSyncRequest) returns (SCIMSyncResponse) {
+    option (workshop.v1.permission) = {permission: "write:scimsync"};
+  }
+}
+
+message MethodPermission {
+  string permission = 1 [targets = TARGET_TYPE_METHOD];
+}
+
+extend google.protobuf.MethodOptions {
+  MethodPermission permission = 342735296;
+}
+
+
+message ListRulesRequest {
+  int32 page_size = 1;
+  int32 page = 2;
+  string filter = 3;
+}
+message ListRulesResponse {
+  repeated Rule rules = 1;
+}
+
+message CreateRuleRequest {
+  Rule rule = 1;
+}
+message CreateRuleResponse {
+  string rule_id = 1;
+}
+
+message DeleteRuleRequest {
+  string rule_id = 1;
+}
+
+message DeleteRuleResponse {}
+
+message ListHostsRequest {
+  // TODO(rah): Add pagination.
+}
+message ListHostsResponse {
+  repeated Host hosts = 1;
+}
+
+message UpdateHostRequest {
+  string uuid = 1;
+  santa.sync.v1.SyncType sync_type = 2;
+  santa.sync.v1.ClientMode client_mode = 3;
+}
+message UpdateHostResponse {}
+
+message ListEventsRequest {
+  uint32 events_per_page = 1;
+  uint32 page = 2;
+  string filter = 3;
+}
+
+message ListEventsResponse {
+  repeated Event events = 1;
+}
+
+message ListBlockablesRequest {
+  BlockableKind kind = 1;
+  uint32 page_size = 2;
+  uint32 page = 3;
+  string filter = 4;
+}
+
+message ListBlockablesResponse {
+  repeated BinaryBlockable binary = 1;
+  repeated CertificateBlockable certificate = 2;
+  repeated BundleBlockable bundle = 3;
+}
+
+message GetStatusRequest {}
+message GetStatusResponse {
+  message HostMapEntry {
+    santa.sync.v1.ClientMode client_mode = 1;
+    uint32 count = 2;
+  }
+  repeated HostMapEntry hosts = 1;
+  uint32 total_hosts = 2;
+
+  message RuleMapEntry {
+    santa.sync.v1.RuleType rule_type = 1;
+    uint32 count = 2;
+  }
+  repeated RuleMapEntry rules = 3;
+  uint32 total_rules = 4;
+}
+
+message GetOSVersionInfoRequest {}
+message GetOSVersionInfoResponse {
+  map<string, string> latest_per_major = 1;
+}
+
+message PushRequest {
+  string host_uuid = 1;
+}
+message PushResponse {}
+
+message ListAPIKeysRequest {}
+message ListAPIKeysResponse {
+  message APIKey {
+    string key_id = 1;
+    string role = 2;
+    string creator = 3;
+    google.protobuf.Timestamp expires = 4;
+  }
+
+  repeated APIKey keys = 1;
+}
+
+message CreateAPIKeyRequest {
+  string key_id = 1;
+  string role = 2;
+  google.protobuf.Duration lifetime = 3;
+}
+message CreateAPIKeyResponse {
+  string secret = 1;
+  google.protobuf.Timestamp expires = 2;
+}
+
+message DeleteAPIKeyRequest {
+  string key_id = 1;
+}
+message DeleteAPIKeyResponse {}
+
+message GetSettingsRequest {}
+message GetSettingsResponse {
+    SyncSettings sync_settings = 1;
+    RiskEngineSettings risk_engine_settings = 2;
+}
+
+message UpdateSettingsRequest {
+  oneof settings {
+    SyncSettings sync_settings = 1;
+    RiskEngineSettings risk_engine_settings = 2;
+  }
+}
+message UpdateSettingsResponse {}
+
+message GetReportRequest {
+  message ReadyForLockdown {
+    string host_id = 1;
+  }
+  message TopBlockables {
+    uint32 limit = 1;
+    bool blocked_only = 2;
+    repeated string with_entitlements = 3;
+  }
+
+  oneof report_kind {
+    ReadyForLockdown ready_for_lockdown = 1;
+    TopBlockables top_blockables = 2;
+  }
+}
+
+message GetReportResponse {
+  message ReadyForLockdown {
+    uint32 average_blocks_per_day = 1;
+    uint32 unique_blocks = 2;
+  }
+  message TopBlockables {
+    message BinaryBlockableAndEventCount {
+      BinaryBlockable blockable = 1;
+      uint32 count = 2;
+    }
+    repeated BinaryBlockableAndEventCount blockable_and_event_count = 1;
+  }
+
+  oneof report_kind {
+    ReadyForLockdown ready_for_lockdown = 1;
+    TopBlockables top_blockables = 2;
+  }
+}
+
+// Checks if a blockable is allowed or denied by the risk engine in its current
+// configuration.
+message CheckBlockableRequest {
+  BinaryBlockable blockable = 1;
+}
+
+// The response to a CheckBlockableRequest.
+message CheckBlockableResponse {
+  repeated RiskEngineResult results = 1;
+}
+
+// Searches through the risk engine results for a given set of risk engine
+// results.
+message GetRiskEngineResultsRequest {
+  uint32 results_per_page = 1;
+  uint32 page = 2;
+  string filter = 3;
+}
+
+message GetRiskEngineResultsResponse {
+  repeated RiskEngineResult results = 1;
+}
+
+message SCIMSyncRequest {}
+message SCIMSyncResponse {}
+
