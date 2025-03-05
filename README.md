@@ -1,92 +1,75 @@
 # Remote Risk Engine Demo
 
-This repository shows how to write a basic remote risk engine plugin
-for North Pole Security's Workshop. 
+This repository shows how to write a **Remote Risk Engine** plugin
+for North Pole Security's [Workshop](https://northpole.security).
 
-It issues a deny response if the binary is from an Apple App Store
-application that has not been on the App store for less than 30 days.
+This example plugin evaluates binaries based on their App Store presence. It verifies code signing information to confirm App Store origin and queries the iTunes Search API to determine the application's release date. The plugin implements a simple risk policy: applications released on the App Store less than 30 days ago are denied, while those with longer market presence are allowed.
 
-> [!WARNING]  
+> [!WARNING]
 > This code is intended only for demo purposes and should not be
 considered production ready.
 >
 > The iTunes Search API is limited to 20 queries per minute and
 > this server uses hard coded secrets.
 
-## Building 
+## Prerequisites
 
-- Simply run `go build -o plugin-server ./cmd/server.go`
+Make sure you have Workshop running. For this example we'll assume Workshop is listening on `localhost:8080`.
 
-## Running
+You'll need to create an API key with read-write access. Workshop API keys begin with `npsws_sk_`.
 
-- Just run the resulting binary `./plugin-server`
+## Build & Run
 
-## Configuring Workshop to Use the Remote Risk Engine Plugin
+```sh
+$ go build -o plugin-server ./cmd/server.go
+$ ./plugin-server
+```
 
-- 1. Use the `Settings API` to ensure the risk engine is enabled and configured to use the remote risk engine
+The plugin server should now be listening at localhost on port 8888.
 
-Configure the remote risk engine to use the plugin. In this case the
-plugin is hosted on localhost and exposed to the Workshop server via 
-docker and runs on port 8888
+## Enable the Plugin
 
-To make the example below change the URL from
-`http://host.docker.internal:8888` to the URL you're hosting the plugin on.
+First, configure Workshop to use the plugin using the `UpdateSettings` API method using the JSON payload below. We'll assume that Workshop is running in Docker, so Workshop will need to point to `http://host.docker.internal:8888` in order to access the plugin server:
 
 ```json
 {
   "enabled": true,
-  "remotePlugins": [{
-     "enabled": true,
-     "name": "demo",
-     "version": "0.0.1",
-     "url": "http://host.docker.internal:8888",
-     "headers": [{"key": "X-API-KEY", "value": "my-secret-api-key"}],
-     "ttl": "120.0s"}]
+  "remotePlugins": [
+    {
+      "enabled": true,
+      "name": "demo",
+      "version": "0.0.1",
+      "url": "http://host.docker.internal:8888",
+      "headers": [{"key": "X-API-Key", "value": "sekrit"}],
+      "ttl": "120.0s"
+    }
+  ]
 }
 ```
 
-You can do this by running the following `grpcurl` command:
+You can send an API request using the `gprcurl` command like this:
 
-```shell
-grpcurl -plaintext -H "Authorization: $WORKSHOP_API_KEY" -d '{"riskEngineSettings":{"enabled":true,"remotePlugins":[{"enabled":true,"name":"demo-plugin","version":"0.0.1","url":"http://host.docker.internal:8888","headers":[{"key":"X-API-KEY","value":"my-secret-api-key"}],"ttl":"120.0s"}]}}' localhost:8080 workshop.v1.WorkshopService/UpdateSettings
+```sh
+$ grpcurl -plaintext \
+  -H "Authorization: $WORKSHOP_API_KEY" \
+  -d '{"riskEngineSettings":{"enabled":true,"remotePlugins":[{"enabled":true,"name":"demo-plugin","version":"0.0.1","url":"http://host.docker.internal:8888","headers":[{"key":"X-API-Key","value":"sekrit"}],"ttl":"120.0s"}]}}' \
+  localhost:8080 workshop.v1.WorkshopService/UpdateSettings
 ```
 
-You can check that the settings were applied using the `GetSettingss`
-API. 
+Check that the settings were applied using the `GetSettings` method:
 
-```shell
-$  grpcurl -plaintext -H "Authorization: $WORKSHOP_API_KEY" -d {} localhost:8080 workshop.v1.WorkshopService/GetSettings
+```sh
+$ grpcurl -plaintext \
+  -H "Authorization: $WORKSHOP_API_KEY" \
+  localhost:8080 workshop.v1.WorkshopService/GetSettings
+
 {
-  "syncSettings": {
-    "enableBundles": true,
-    "enableAllEventUpload": true
-  },
+  ...
   "riskEngineSettings": {
     "enabled": true,
     "pluginTimeout": "120s",
     "localPlugins": {
-      "virusTotal": {
-        "enabled": false,
-        "apiKey": "",
-        "cacheTtl": "60s",
-        "numCacheEntries": 10
-      },
-      "reversingLabs": {
-        "enabled": false,
-        "username": "",
-        "password": "",
-        "cacheTtl": "600s",
-        "numCacheEntries": 1000
-      },
-      "blockableRules": {
-        "enabled": true,
-        "rules": [
-          {
-            "rule": "blockable.team_id == \"EQHXZ8M8AV\"",
-            "comment": "test rule"
-          }
-        ]
-      }
+      ...
     },
     "remotePlugins": [
       {
@@ -97,8 +80,8 @@ $  grpcurl -plaintext -H "Authorization: $WORKSHOP_API_KEY" -d {} localhost:8080
         "url": "http://host.docker.internal:8888",
         "headers": [
           {
-            "key": "X-API-KEY",
-            "value": "my-secret-api-key"
+            "key": "X-API-Key",
+            "value": "sekrit"
           }
         ],
         "ttl": "120s"
@@ -108,15 +91,16 @@ $  grpcurl -plaintext -H "Authorization: $WORKSHOP_API_KEY" -d {} localhost:8080
 }
 ```
 
+## Test the Plugin
 
-- 2. Use configure the `CheckBlockable` API call to invoke the risk engine 
+You can check the Remote Risk Engine plugin is working properly by using the `CheckBlockable` API method to check a binary. We've picked an arbitrary SHA256 as an identifier for this example, but you could get one yourself using `santactl fileinfo <path-to-binary>` if you wanted.
 
-You can check the Risk Engine is working properly by invoking the
-`CheckBlockable` API. This covers an entire blockable (binary
-attributes that Santa can block on.)
+```sh
+$ grpcurl \
+  -plaintext -H "Authorization: $WORKSHOP_API_KEY" \
+  -d '{"blockable": {"sha256": "4e4eea34dc9d936ba7d60f8814dc1d0c87d48c88d68bbf14cde97d8a33663842"}}' \
+  localhost:8080 workshop.v1.WorkshopService/CheckBlockable
 
-```shell
-$  grpcurl -plaintext -H "Authorization: $WORKSHOP_API_KEY" -d '{"blockable": {"sha256": "4e4eea34dc9d936ba7d60f8814dc1d0c87d48c88d68bbf14cde97d8a33663842"}}' localhost:8080 workshop.v1.WorkshopService/CheckBlockable
 {
   "results": [
     {
@@ -152,41 +136,26 @@ $  grpcurl -plaintext -H "Authorization: $WORKSHOP_API_KEY" -d '{"blockable": {"
 }
 ```
 
+When Workshop calls the plugin, it should log its decisions to stderr:
 
-- 3. Watch the plugin server's output to see it receive requests and
-  make decisions.
-
-When Workshop calls into the plugin it will print its decisions out
-to stderr using go's log module.
-
-```shell
-$  go run ./cmd/server.go 
-2025/03/04 20:00:53 Starting HTTP server...
+```sh
+$ ./plugin-server
+2025/03/04 20:00:53 Starting HTTP server on port 8888...
 2025/03/04 20:01:09 Binary:  Things3
 2025/03/04 20:01:09 Decision: DECISION_ALLOW
 2025/03/04 20:01:09 Team ID:  JLMPQHK86H
 2025/03/04 20:01:09 App Store URL:  https://apps.apple.com/us/app/things-3/id904280696?mt=12&uo=4
 2025/03/04 20:01:09 Good until:  3000-12-25 00:00:00 +0000 UTC
-2025/03/04 20:01:09 
-2025/03/04 20:01:09 
 ```
 
-## Policy Enforced by the Plugin
-
-This plugin uses the code signing information of a binary to see if
-it's from the App Store. It then checks the iTunes Search API to see
-when the first release of the application was added to the App Store.
-If it was added less than 30 days prior the plugin returns a deny
-response and allows otherwise.
-
-This can be summarized as follows:
+## Workflow Diagram
 
 ```mermaid
 flowchart TD
 A[Receives an Authz request for a Binary]
 B{Is this binary signed by the App Store?}
-C{Has this binary only been on 
-  the App Store 
+C{Has this binary only been on
+  the App Store
   for less than 30 days?}
 X[Allow Binary]
 Y[Deny Binary]
@@ -198,8 +167,7 @@ C --> |No|X
 C --> |Yes|Y
 ```
 
-
-## Interactions
+## Interaction Diagram
 
 ```mermaid
 sequenceDiagram

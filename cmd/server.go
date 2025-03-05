@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	apiKeyHeader = "X-API-KEY"
-	validAPIKey  = "my-secret-api-key"
+	apiKeyHeader = "X-API-Key"
+	validAPIKey  = "sekrit"
 
 	// This is a date in the distant future that ensures workshop can cache the
 	// result forever.
@@ -61,7 +61,7 @@ func main() {
 		// Redirect HTTP to HTTPS
 		http.ListenAndServe(":80", certManager.HTTPHandler(nil))
 	} else {
-		log.Println("Starting HTTP server...")
+		log.Println("Starting HTTP server on port 8888...")
 		http.ListenAndServe("127.0.0.1:8888", nil)
 	}
 }

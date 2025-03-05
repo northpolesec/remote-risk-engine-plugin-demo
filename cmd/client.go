@@ -63,7 +63,7 @@ func main() {
 
 	// Set the content type and custom headers
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-API-KEY", "my-secret-api-key")
+	httpReq.Header.Set("X-API-Key", "sekrit")
 
 	// Make the HTTP request
 	client := &http.Client{}
