@@ -29,6 +29,9 @@ Configure the remote risk engine to use the plugin. In this case the
 plugin is hosted on localhost and exposed to the Workshop server via 
 docker and runs on port 8888
 
+To make the example below change the URL from
+`http://host.docker.internal:8888` to the URL you're hosting the plugin on.
+
 ```json
 {
   "enabled": true,
@@ -36,7 +39,7 @@ docker and runs on port 8888
      "enabled": true,
      "name": "demo",
      "version": "0.0.1",
-     "url": "http://host.docker.internal:8888", <-- change this to your
+     "url": "http://host.docker.internal:8888",
      "headers": [{"key": "X-API-KEY", "value": "my-secret-api-key"}],
      "ttl": "120.0s"}]
 }
