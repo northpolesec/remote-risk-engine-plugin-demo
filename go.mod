@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	buf.build/gen/go/northpolesec/workshop-api/protocolbuffers/go v1.36.5-20250228023657-5e2831ffb76b.1 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/text v0.22.0 // indirect

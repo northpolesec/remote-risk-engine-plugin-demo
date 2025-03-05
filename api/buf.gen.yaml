@@ -5,8 +5,3 @@ plugins:
   - remote: buf.build/connectrpc/go:v1.18.1
     out: gen
     opt: package_suffix
-  - remote: buf.build/bufbuild/es:v2.2.3
-    out: ../ui/gen
-    include_imports: true
-    opt:
-      - target=ts
