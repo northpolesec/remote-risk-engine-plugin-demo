@@ -226,8 +226,7 @@ decision.
 
 Once the data from the request has been processed a `PluginAuthzResponse` must be send back to Workshop with a decision and and explanation for the decision.
 
-
-After the plugin has made a decision it sends back a `PluginAuthzResponse` to Workshop. 
+The structure of the `PluginAuthzResponse` is as follows:
 
 ```proto
 // This message is used by a remote risk engine plugin to represent the decision
