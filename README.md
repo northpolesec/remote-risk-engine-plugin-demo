@@ -214,12 +214,12 @@ message PluginAuthzRequest {
 ```
 
 After unmarshaling the `PluginAuthzRequest` you can find all of the details
-about the binary in the `Blockable` field. This contains all of the attributes
+about the binary in the `blockable` field. This contains a subset of the attributes
 Santa has recorded at the time of execution, including signing information.
 
-Each request has a transaction ID (`TxId`) field and all responses are expected to have the same value in their transaction ID field.
+Each request has a transaction ID (`tx_id`) field and all responses are expected to have the same value in their transaction ID field.
 
-Each `PluginAuthzRequest` also contains a Deadline that the plugin must respond
+Each `PluginAuthzRequest` also contains a `deadline` that the plugin must respond
 with a `PluginAuthzResponse` before to be considered. Failure to respond within
 the deadline will be treated as a if the plugin had responded with a deny
 decision.
@@ -227,7 +227,7 @@ decision.
 Once the data from the request has been processed a `PluginAuthzResponse` must be send back to Workshop with a decision and and explanation for the decision.
 
 
-After the plugin has made a decision it sends back a `PluginAuthzResponse` to Workshop. This response contains the following fields.
+After the plugin has made a decision it sends back a `PluginAuthzResponse` to Workshop. 
 
 ```proto
 // This message is used by a remote risk engine plugin to represent the decision
