@@ -171,8 +171,110 @@ C --> |Yes|Y
 
 ```mermaid
 sequenceDiagram
-Workshop ->> Plugin: Make an AuthzRequest for a binary
+Workshop ->> Plugin: Makes an PluginAuthzRequest for a binary
 Plugin ->> iTunes Search API: Search for binary on App Store
 Plugin ->> Plugin: Evaluate binary against App Store information
-Plugin -->> Workshop: Return policy decision
+Plugin -->> Workshop: Returns a PluginAuthzResponse containing a policy decision
+```
+
+## Writing Your Own Remote Risk Engine Plugin
+
+Whenever Workshop encounters a new binary the Risk Engine and its plugins are
+consulted. While Workshop includes some baked in plugins (e.g. VirusTotal, ReversingLabs and Blockable Rules) users can also extend this functionality by writing a remote plugin that conforms the remote risk engine plugin protocol.
+
+>[!Note] In order for a binary to be approved all configured risk engine plugins must return a decision of approved.
+
+To write your own remote risk engine plugin you need to simply create a server
+that takes an HTTP POST with JSON consisting of the `PluginAuthzRequest` and
+that returns an `PluginAuthzResponse` serialized to JSON.
+
+The interaction is essentially as follows:
+
+```mermaid
+sequenceDiagram
+Workshop ->> Plugin: Makes an PluginAuthzRequest for a binary
+Plugin -->> Workshop: Returns a PluginAuthzResponse containing a policy decision
+```
+
+>[!Note] Plugin authors are responsible for TLS and authorization. So you are encouraged to use best practices.
+
+### Handling Requests
+
+The first step is to make a webservice that can receive and unmarshal a `PluginAuthzRequest`.
+
+```proto
+// A PluginAuthzRequest is a request made by Workshop to 
+// a plugin to authorize a  binary / blockable.
+message PluginAuthzRequest {
+  string tx_id = 1;               // The transaction ID of the request.
+  BinaryBlockable blockable = 2;  // The binary to authorize with all blockable attributes.
+  google.protobuf.Timestamp timestamp = 3; // The timestamp of the request.
+  google.protobuf.Timestamp deadline = 4; // The deadline for the plugin to return a decision before it is automatically considered a denial.
+}
+```
+
+After unmarshaling the `PluginAuthzRequest` you can find all of the details
+about the binary in the `blockable` field. This contains a subset of the attributes
+Santa has recorded at the time of execution, including signing information.
+
+Each request has a transaction ID (`tx_id`) field and all responses are expected to have the same value in their transaction ID field.
+
+Each `PluginAuthzRequest` also contains a `deadline` that the plugin must respond
+with a `PluginAuthzResponse` before to be considered. Failure to respond within
+the deadline will be treated as a if the plugin had responded with a deny
+decision.
+
+Once the data from the request has been processed a `PluginAuthzResponse` must be send back to Workshop with a decision and and explanation for the decision.
+
+The structure of the `PluginAuthzResponse` is as follows:
+
+```proto
+// This message is used by a remote risk engine plugin to represent the decision
+// for a blockable.  All errors and timeouts are treated as denials.
+message PluginAuthzResponse {
+  string tx_id = 1; // The transaction ID of the request this response is for.
+  Decision decision = 2; // The decision for the blockable.
+  Explanation explanation = 3; // An explanation for the decision.
+  string error = 4; // An error message containing any errors the plugin encountered.
+  string plugin_uuid = 5; // The UUID of the plugin that made the decision.
+  google.protobuf.Timestamp good_until = 6; // The time the decision is considered valid until for caching.
+}
+```
+
+Decisions can be one of the following:
+
+| Decision |  Meaning |
+|---|---|
+| UNKNOWN | This is a programming error and should not be used |
+| DENY | The plugin has determined the binary should be blocked by policy. |
+| DENY_MALWARE | The plugin has determined the binary is malware and should be blocked |
+| ALLOW | The plugin believes this binary is safe. |
+| TIMEOUT | The plugin or something it depends on has timed out |
+| ERROR | The plugin has encountered an error |
+
+All decisions except for allow are considered a denial.
+
+```proto
+// Decision values for a remote risk engine plugin may return for a binary.
+enum Decision {
+  DECISION_UNKNOWN = 0;
+  DECISION_DENY = 1;
+  DECISION_DENY_MALWARE = 2;
+  DECISION_ALLOW = 3;
+  DECISION_TIMEOUT = 4;
+  DECISION_ERROR = 5;
+}
+```
+
+Additionally plugin authors are expected to provide an explanation for the
+decision and optionally a URL for getting more information. Workshop presents this information to to users and also helps with debugging.
+
+```proto
+// An Explanation is used to provide a message to the user when a blockable is
+// evaluated.
+message Explanation {
+  string message = 1; // Message to present to the user / other part of workshop
+  string url = 2; // URL to present to the user for more information.
+  bool is_json = 3; // Whether or not the content of the message field is JSON.
+}
 ```
