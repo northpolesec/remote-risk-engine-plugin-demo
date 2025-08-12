@@ -62,7 +62,7 @@ func main() {
 		http.ListenAndServe(":80", certManager.HTTPHandler(nil))
 	} else {
 		log.Println("Starting HTTP server on port 8888...")
-		http.ListenAndServe("127.0.0.1:8888", nil)
+		http.ListenAndServe("0.0.0.0:8888", nil)
 	}
 }
 
@@ -145,12 +145,15 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
+                fmt.Println("ERROR: ", err)
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
 
-	authzReq := &apipb.PluginAuthzRequest{}
+	authzReq := &apipb.RemoteRiskEnginePluginServiceAuthorizeRequest{}
 	if err := protojson.Unmarshal(data, authzReq); err != nil {
+         	fmt.Println("ERROR BAD JSON: ", err)
+                fmt.Println(string(data))
 		http.Error(w, "Invalid JSON data", http.StatusBadRequest)
 		return
 	}
@@ -158,7 +161,7 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 	// Check time.
 	w.Header().Set("Content-Type", "application/json")
 
-	authzResp := &apipb.PluginAuthzResponse{
+	authzResp := &apipb.RemoteRiskEnginePluginServiceAuthorizeResponse{
 		Decision:    apipb.Decision_DECISION_ERROR,
 		PluginUuid:  "271b581e-498c-4ef0-95f2-57cdc6330e22",
 		TxId:        authzReq.TxId,
@@ -169,22 +172,35 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 	if authzReq.Blockable == nil {
 		authzResp.Decision = apipb.Decision_DECISION_ERROR
 		authzResp.Error = "Blockable is nil"
-		json.NewEncoder(w).Encode(authzResp)
+		respBody, err := protojson.Marshal(authzResp)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Server response: %s", string(respBody))
+		w.Write(respBody)
 		log.Println("Blockable is nil")
 		return
 	}
 
-	signingCert := authzReq.Blockable.GetSignedBy()
+	signingCerts := authzReq.Blockable.SignedBy
 
-	if signingCert.GetSignedBy() != appStoreCertSha256 {
+	// Check if the binary is signed by the App Store certificate
+	if len(signingCerts) == 0 || signingCerts[0].SignedBy != appStoreCertSha256 {
 		authzResp.Decision = apipb.Decision_DECISION_ALLOW
 		authzResp.Explanation.Message = "Binary is not not from the app store"
-		json.NewEncoder(w).Encode(authzResp)
+		respBody, err := protojson.Marshal(authzResp)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Server response: %s", string(respBody))
+		w.Write(respBody)
 		return
 	}
 	// Fetch the json from the iTunes Store Search API and check if the first
 	// release date vs. the current release date is less than a month old.
-	bundleID := authzReq.Blockable.GetSigningId()
+	bundleID := authzReq.Blockable.SigningId
 
 	// strip the TeamID: prefix from the bundleID
 	if strings.HasPrefix(bundleID, "platform:") {
@@ -194,7 +210,13 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 		if len(bundleIDParts) < 2 {
 			authzResp.Decision = apipb.Decision_DECISION_ERROR
 			authzResp.Error = "Malformed signing ID"
-			json.NewEncoder(w).Encode(authzResp)
+			respBody, err := protojson.Marshal(authzResp)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Server response: %s", string(respBody))
+		w.Write(respBody)
 			return
 		}
 
@@ -202,7 +224,13 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		authzResp.Decision = apipb.Decision_DECISION_ERROR
 		authzResp.Error = "Invalid bundle ID"
-		json.NewEncoder(w).Encode(authzResp)
+		respBody, err := protojson.Marshal(authzResp)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Server response: %s", string(respBody))
+		w.Write(respBody)
 		return
 	}
 
@@ -212,7 +240,13 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 		authzResp.GoodUntil = timestamppb.New(time.Time{})
 		authzResp.Decision = apipb.Decision_DECISION_ERROR
 		authzResp.Error = err.Error()
-		json.NewEncoder(w).Encode(authzResp)
+		respBody, err := protojson.Marshal(authzResp)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Server response: %s", string(respBody))
+		w.Write(respBody)
 		return
 	}
 
@@ -229,11 +263,17 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Binary: ", authzReq.Blockable.FileName)
 	log.Println("Decision:", authzResp.Decision)
-	log.Println("Team ID: ", authzReq.Blockable.GetTeamId())
+	log.Println("Team ID: ", authzReq.Blockable.TeamId)
 	log.Println("App Store URL: ", storeURL)
 	log.Println("Good until: ", goodUntil)
 	log.Println()
 	log.Println()
 
-	json.NewEncoder(w).Encode(authzResp)
+	respBody, err := protojson.Marshal(authzResp)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Server response: %s", string(respBody))
+		w.Write(respBody)
 }

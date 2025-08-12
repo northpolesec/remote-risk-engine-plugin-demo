@@ -1,9 +1,7 @@
-buf.build/gen/go/northpolesec/protos/protocolbuffers/go v1.36.5-20250205183953-5b8cc4eb768b.1 h1:0ppYpGGaeWPEkCbMlAnyb8JzRzTzEOuEFcIKpCdMITY=
-buf.build/gen/go/northpolesec/protos/protocolbuffers/go v1.36.5-20250205183953-5b8cc4eb768b.1/go.mod h1:nhgtguJb5Wg2nzlWrhd2MCZqayMQ2gvUKNVV0U0YQHU=
-buf.build/gen/go/northpolesec/workshop-api/protocolbuffers/go v1.36.5-20250228023657-5e2831ffb76b.1 h1:cTnA6VemH7cxVEr4VCpm9TxSMl4aViAVaN94MMo+5Kg=
-buf.build/gen/go/northpolesec/workshop-api/protocolbuffers/go v1.36.5-20250228023657-5e2831ffb76b.1/go.mod h1:CfwEab2SbVCVCTXhKFGplB8iHHn4cgPjEfjIz9IDf2g=
-connectrpc.com/connect v1.18.1 h1:PAg7CjSAGvscaf6YZKUefjoih5Z/qYkyaTrBW8xvYPw=
-connectrpc.com/connect v1.18.1/go.mod h1:0292hj1rnx8oFrStN7cB4jjVBeqs+Yx5yDIC2prWDO8=
+buf.build/gen/go/northpolesec/protos/protocolbuffers/go v1.36.7-20250714164109-858f34416d3d.1 h1:vMDcsjDjTsk1Z0/8TG5T17A26NS1YSA9J7nCaZ15z1s=
+buf.build/gen/go/northpolesec/protos/protocolbuffers/go v1.36.7-20250714164109-858f34416d3d.1/go.mod h1:5IRKS69+iTNDWYRGwB+2xTNXzhdPmSJobpncycigAgU=
+buf.build/gen/go/northpolesec/workshop-api/protocolbuffers/go v1.36.7-20250805161517-c36ebc1092e6.1 h1:0AsJY/3QXM51G6AwiXdcNxDYv8hOnPyqpiU4DC9CLNw=
+buf.build/gen/go/northpolesec/workshop-api/protocolbuffers/go v1.36.7-20250805161517-c36ebc1092e6.1/go.mod h1:y7rVJu03Qf0fY0sCwM1IrxrOJjGwR4fae4Eu168RdIk=
 github.com/PuerkitoBio/goquery v1.10.1 h1:Y8JGYUkXWTGRB6Ars3+j3kN0xg1YqqlwvdTV8WTFQcU=
 github.com/PuerkitoBio/goquery v1.10.1/go.mod h1:IYiHrOMps66ag56LEH7QYDDupKXyo5A8qrjIx3ZtujY=
 github.com/andybalholm/cascadia v1.3.3 h1:AG2YHrzJIm4BZ19iwJ/DAua6Btl3IwJX+VI4kktS1LM=
@@ -81,5 +79,5 @@ golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d/go.mod h1:aiJjzUbINMkxb
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 google.golang.org/genproto/googleapis/api v0.0.0-20250207221924-e9438ea467c6 h1:L9JNMl/plZH9wmzQUHleO/ZZDSN+9Gh41wPczNy+5Fk=
 google.golang.org/genproto/googleapis/api v0.0.0-20250207221924-e9438ea467c6/go.mod h1:iYONQfRdizDB8JJBybql13nArx91jcUk7zCXEsOofM4=
-google.golang.org/protobuf v1.36.5 h1:tPhr+woSbjfYvY6/GPufUoYizxw1cF/yFoxJ2fmpwlM=
-google.golang.org/protobuf v1.36.5/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
+google.golang.org/protobuf v1.36.7 h1:IgrO7UwFQGJdRNXH/sQux4R1Dj1WAKcLElzeeRaXV2A=
+google.golang.org/protobuf v1.36.7/go.mod h1:jduwjTPXsFjZGTmRluh+L6NjiWu7pchiJ2/5YcXBHnY=

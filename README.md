@@ -14,9 +14,11 @@ considered production ready.
 
 ## Prerequisites
 
-Make sure you have Workshop running. For this example we'll assume Workshop is listening on `localhost:8080`.
+- A Workshop instance
+- Workshop Admin permissions
 
-You'll need to create an API key with read-write access. Workshop API keys begin with `npsws_sk_`.
+For this example we'll assume that your plugin is reachable at
+`plugin.example.com:8888`
 
 ## Build & Run
 
@@ -25,21 +27,30 @@ $ go build -o plugin-server ./cmd/server.go
 $ ./plugin-server
 ```
 
-The plugin server should now be listening at localhost on port 8888.
+The plugin server should now be listening on port 8888.
 
 ## Enable the Plugin
 
-First, configure Workshop to use the plugin using the `UpdateSettings` API method using the JSON payload below. We'll assume that Workshop is running in Docker, so Workshop will need to point to `http://host.docker.internal:8888` in order to access the plugin server:
+### Using the UI
+
+If you're using the UI, you can simply browse to the `/settings` page and click on Remote Risk Engine plugins tab and fill in the form.
+
+### Via the API
+
+First, configure Workshop to use the plugin using the [`UpdateRiskEngineSettings` method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.UpdateRiskEngineSettings) using the JSON payload below changing `plugin.example.com` to the address you're plugin is running at. We'll assume that Workshop is running in
+Docker, so Workshop will need to point to `https://plugin.example.com:8888` in
+order to access the plugin server:
 
 ```json
 {
   "enabled": true,
+  // ... SNIPPED
   "remotePlugins": [
     {
       "enabled": true,
       "name": "demo",
       "version": "0.0.1",
-      "url": "http://host.docker.internal:8888",
+      "url": "https://plugin.example.com:8888",
       "headers": [{"key": "X-API-Key", "value": "sekrit"}],
       "ttl": "120.0s"
     }
@@ -47,59 +58,56 @@ First, configure Workshop to use the plugin using the `UpdateSettings` API metho
 }
 ```
 
-You can send an API request using the `gprcurl` command like this:
+Check that the settings were applied using the [`GetRiskEngineSettings` method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.UpdateRiskEngineSettings):
 
-```sh
-$ grpcurl -plaintext \
+```shell
+$ grpcurl \
   -H "Authorization: $WORKSHOP_API_KEY" \
-  -d '{"riskEngineSettings":{"enabled":true,"remotePlugins":[{"enabled":true,"name":"demo-plugin","version":"0.0.1","url":"http://host.docker.internal:8888","headers":[{"key":"X-API-Key","value":"sekrit"}],"ttl":"120.0s"}]}}' \
-  localhost:8080 workshop.v1.WorkshopService/UpdateSettings
+  nps.workshop.cloud:443 workshop.v1.WorkshopService/GetRiskEngineSettings
 ```
 
-Check that the settings were applied using the `GetSettings` method:
+You should see your plugin matching:
 
-```sh
-$ grpcurl -plaintext \
-  -H "Authorization: $WORKSHOP_API_KEY" \
-  localhost:8080 workshop.v1.WorkshopService/GetSettings
-
+```json
 {
-  ...
   "riskEngineSettings": {
     "enabled": true,
-    "pluginTimeout": "120s",
-    "localPlugins": {
-      ...
-    },
-    "remotePlugins": [
-      {
-        "enabled": true,
-        "name": "demo-plugin",
-        "version": "0.0.1",
-        "uuid": "a3edf34c-5825-46cd-b121-0b2681c4bd44",
-        "url": "http://host.docker.internal:8888",
-        "headers": [
-          {
-            "key": "X-API-Key",
-            "value": "sekrit"
-          }
-        ],
-        "ttl": "120s"
-      }
-    ]
-  }
-}
+    // SNIPPED.
+    "remote
+
+
+
 ```
+
 
 ## Test the Plugin
 
-You can check the Remote Risk Engine plugin is working properly by using the `CheckBlockable` API method to check a binary. We've picked an arbitrary SHA256 as an identifier for this example, but you could get one yourself using `santactl fileinfo <path-to-binary>` if you wanted.
+### Testing via the UI
+
+In the UI go to the Risk Engine card on the Settings page and drag in an
+application. You should see your remote plugin being called in the list of Risk
+Engine Plugins.
+
+TODO put the image here.
+
+
+### Testing via the API
+
+You can check the Remote Risk Engine plugin is working properly in Workshop by
+calling the [`CheckBlockable` method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.CheckBlockable) to evaluate a binary. 
+
+The `CheckBlockable` method will fill in other details for the blockable field
+from Workshop's database if only the SHA256 is filled in.
+
+In this example we've picked an arbitrary SHA256 as an identifier for this
+example, but you could get one yourself using `santactl fileinfo
+<path-to-binary>` if you wanted.
 
 ```sh
 $ grpcurl \
   -plaintext -H "Authorization: $WORKSHOP_API_KEY" \
   -d '{"blockable": {"sha256": "4e4eea34dc9d936ba7d60f8814dc1d0c87d48c88d68bbf14cde97d8a33663842"}}' \
-  localhost:8080 workshop.v1.WorkshopService/CheckBlockable
+  nps.workshop.cloud:443 workshop.v1.WorkshopService/CheckBlockable
 
 {
   "results": [
@@ -136,7 +144,7 @@ $ grpcurl \
 }
 ```
 
-When Workshop calls the plugin, it should log its decisions to stderr:
+When Workshop calls the plugin, you'll see its logs on stderr:
 
 ```sh
 $ ./plugin-server
@@ -179,102 +187,4 @@ Plugin -->> Workshop: Returns a PluginAuthzResponse containing a policy decision
 
 ## Writing Your Own Remote Risk Engine Plugin
 
-Whenever Workshop encounters a new binary the Risk Engine and its plugins are
-consulted. While Workshop includes some baked in plugins (e.g. VirusTotal, ReversingLabs and Blockable Rules) users can also extend this functionality by writing a remote plugin that conforms the remote risk engine plugin protocol.
-
->[!Note] In order for a binary to be approved all configured risk engine plugins must return a decision of approved.
-
-To write your own remote risk engine plugin you need to simply create a server
-that takes an HTTP POST with JSON consisting of the `PluginAuthzRequest` and
-that returns an `PluginAuthzResponse` serialized to JSON.
-
-The interaction is essentially as follows:
-
-```mermaid
-sequenceDiagram
-Workshop ->> Plugin: Makes an PluginAuthzRequest for a binary
-Plugin -->> Workshop: Returns a PluginAuthzResponse containing a policy decision
-```
-
->[!Note] Plugin authors are responsible for TLS and authorization. So you are encouraged to use best practices.
-
-### Handling Requests
-
-The first step is to make a webservice that can receive and unmarshal a `PluginAuthzRequest`.
-
-```proto
-// A PluginAuthzRequest is a request made by Workshop to 
-// a plugin to authorize a  binary / blockable.
-message PluginAuthzRequest {
-  string tx_id = 1;               // The transaction ID of the request.
-  BinaryBlockable blockable = 2;  // The binary to authorize with all blockable attributes.
-  google.protobuf.Timestamp timestamp = 3; // The timestamp of the request.
-  google.protobuf.Timestamp deadline = 4; // The deadline for the plugin to return a decision before it is automatically considered a denial.
-}
-```
-
-After unmarshaling the `PluginAuthzRequest` you can find all of the details
-about the binary in the `blockable` field. This contains a subset of the attributes
-Santa has recorded at the time of execution, including signing information.
-
-Each request has a transaction ID (`tx_id`) field and all responses are expected to have the same value in their transaction ID field.
-
-Each `PluginAuthzRequest` also contains a `deadline` that the plugin must respond
-with a `PluginAuthzResponse` before to be considered. Failure to respond within
-the deadline will be treated as a if the plugin had responded with a deny
-decision.
-
-Once the data from the request has been processed a `PluginAuthzResponse` must be send back to Workshop with a decision and and explanation for the decision.
-
-The structure of the `PluginAuthzResponse` is as follows:
-
-```proto
-// This message is used by a remote risk engine plugin to represent the decision
-// for a blockable.  All errors and timeouts are treated as denials.
-message PluginAuthzResponse {
-  string tx_id = 1; // The transaction ID of the request this response is for.
-  Decision decision = 2; // The decision for the blockable.
-  Explanation explanation = 3; // An explanation for the decision.
-  string error = 4; // An error message containing any errors the plugin encountered.
-  string plugin_uuid = 5; // The UUID of the plugin that made the decision.
-  google.protobuf.Timestamp good_until = 6; // The time the decision is considered valid until for caching.
-}
-```
-
-Decisions can be one of the following:
-
-| Decision |  Meaning |
-|---|---|
-| UNKNOWN | This is a programming error and should not be used |
-| DENY | The plugin has determined the binary should be blocked by policy. |
-| DENY_MALWARE | The plugin has determined the binary is malware and should be blocked |
-| ALLOW | The plugin believes this binary is safe. |
-| TIMEOUT | The plugin or something it depends on has timed out |
-| ERROR | The plugin has encountered an error |
-
-All decisions except for allow are considered a denial.
-
-```proto
-// Decision values for a remote risk engine plugin may return for a binary.
-enum Decision {
-  DECISION_UNKNOWN = 0;
-  DECISION_DENY = 1;
-  DECISION_DENY_MALWARE = 2;
-  DECISION_ALLOW = 3;
-  DECISION_TIMEOUT = 4;
-  DECISION_ERROR = 5;
-}
-```
-
-Additionally plugin authors are expected to provide an explanation for the
-decision and optionally a URL for getting more information. Workshop presents this information to to users and also helps with debugging.
-
-```proto
-// An Explanation is used to provide a message to the user when a blockable is
-// evaluated.
-message Explanation {
-  string message = 1; // Message to present to the user / other part of workshop
-  string url = 2; // URL to present to the user for more information.
-  bool is_json = 3; // Whether or not the content of the message field is JSON.
-}
-```
+Documentation can be found at [https://docs.workshop.cloud/risk-engine](https://docs.workshop.cloud/risk-engine#writing-your-own-remote-risk-engine-plugins)
