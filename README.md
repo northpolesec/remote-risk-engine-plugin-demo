@@ -37,9 +37,7 @@ If you're using the UI, you can simply browse to the `/settings` page and click 
 
 ### Via the API
 
-First, configure Workshop to use the plugin using the [`UpdateRiskEngineSettings` method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.UpdateRiskEngineSettings) using the JSON payload below changing `plugin.example.com` to the address you're plugin is running at. We'll assume that Workshop is running in
-Docker, so Workshop will need to point to `https://plugin.example.com:8888` in
-order to access the plugin server:
+First, configure Workshop to use the plugin using the [`UpdateRiskEngineSettings` method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.UpdateRiskEngineSettings) using the JSON payload below changing `plugin.example.com` to the address you're plugin is running at. 
 
 ```json
 {
@@ -72,23 +70,38 @@ You should see your plugin matching:
 {
   "riskEngineSettings": {
     "enabled": true,
-    // SNIPPED.
-    "remote
-
-
-
+    "localPlugins": {
+     // SNIPPED
+    },
+    "remotePlugins": [
+      {
+        "enabled": true,
+        "name": "iTunes Store Plugin",
+        "version": "1.0.0",
+        "uuid": "e0fb4e11-9b00-4c79-8876-eb01971cb708",
+        "url": "https://f4e3fe45a4e8.ngrok-free.app",
+        "headers": [
+          {
+            "key": "X-API-Key",
+            "value": "sekrit"
+          }
+        ],
+        "ttl": "10s"
+      }
+    ]
+  }
+}
 ```
-
 
 ## Test the Plugin
 
-### Testing via the UI
+### Testing via the Workshop UI
 
-In the UI go to the Risk Engine card on the Settings page and drag in an
-application. You should see your remote plugin being called in the list of Risk
-Engine Plugins.
+In the Workshop UI go to the Risk Engine card on the Settings page. Click `Test
+Configuration` and drag in an application. You should see your remote plugin
+being called in the list of Risk Engine Plugins.
 
-TODO put the image here.
+![](./docs/images/test-engine.png)
 
 
 ### Testing via the API
@@ -103,42 +116,65 @@ In this example we've picked an arbitrary SHA256 as an identifier for this
 example, but you could get one yourself using `santactl fileinfo
 <path-to-binary>` if you wanted.
 
-```sh
-$ grpcurl \
-  -plaintext -H "Authorization: $WORKSHOP_API_KEY" \
-  -d '{"blockable": {"sha256": "4e4eea34dc9d936ba7d60f8814dc1d0c87d48c88d68bbf14cde97d8a33663842"}}' \
-  nps.workshop.cloud:443 workshop.v1.WorkshopService/CheckBlockable
+E.g. Checking Things3.app from the App Store you should see.
 
+```sh
+$  grpcurl \
+  -H "Authorization: $WORKSHOP_API_KEY" \
+  -d '{"blockable": {"sha256": "762fb9cdc3d9bf0d42800c4f887604f26af625c7b94de142ec5f72864486b1ba"}}' \
+  nps.workshop.cloud:443 workshop.v1.WorkshopService/CheckBlockable
 {
   "results": [
     {
-      "timestamp": "2025-03-05T18:30:06.041106709Z",
+      "timestamp": "2025-08-18T17:35:41.308688547Z",
+      "goodUntil": "2025-08-19T17:35:41.004858863Z",
+      "txId": "addd8379-6ad9-449e-8351-078a36f9a987",
+      "allowed": true,
+      "decision": "DECISION_ALLOW",
+      "pluginName": "ReversingLabs (1.0.0)",
+      "pluginUuid": "0446500a-2d50-475e-860c-f796c39dd41e",
+      "explanation": "File is not flagged malicious by ReversingLabs"
+    },
+    {
+      "timestamp": "2025-08-18T17:35:41.308688547Z",
       "goodUntil": "3000-12-25T00:00:00Z",
-      "txId": "050bc98c-189b-4da6-9665-871955f769dd",
+      "txId": "addd8379-6ad9-449e-8351-078a36f9a987",
       "allowed": true,
       "decision": "DECISION_ALLOW",
-      "pluginName": "Blockable Rules (1.0.0)",
-      "pluginUuid": "51d20397-d4f2-4bc8-915b-137dcb841548",
-      "explanation": "No rules matched"
+      "pluginName": "BlockableRule:Virtualization Software (1.0.0)",
+      "pluginUuid": "6b367847-7b45-48a5-9cc6-4e0658dd660e",
+      "explanation": "Rule did not match"
     },
     {
-      "timestamp": "2025-03-05T18:30:06.041106709Z",
-      "goodUntil": "1970-01-01T00:00:00Z",
-      "txId": "050bc98c-189b-4da6-9665-871955f769dd",
+      "timestamp": "2025-08-18T17:35:41.308688547Z",
+      "goodUntil": "3000-12-25T00:00:00Z",
+      "txId": "addd8379-6ad9-449e-8351-078a36f9a987",
       "allowed": true,
       "decision": "DECISION_ALLOW",
-      "pluginUuid": "271b581e-498c-4ef0-95f2-57cdc6330e22",
-      "explanation": "Binary is not not from the app store"
+      "pluginName": "BlockableRule:Flag VPNs (1.0.0)",
+      "pluginUuid": "0d50a299-1ef7-4e4b-8509-d28c1aae4990",
+      "explanation": "Rule did not match"
     },
     {
-      "timestamp": "2025-03-05T18:30:06.041106709Z",
-      "goodUntil": "2025-03-05T18:31:06.040980876Z",
-      "txId": "050bc98c-189b-4da6-9665-871955f769dd",
+      "timestamp": "2025-08-18T17:35:41.308688547Z",
+      "goodUntil": "3000-12-25T00:00:00Z",
+      "txId": "addd8379-6ad9-449e-8351-078a36f9a987",
       "allowed": true,
       "decision": "DECISION_ALLOW",
-      "pluginName": "VirusTotal (1.0.0)",
-      "pluginUuid": "8f239575-826e-4909-9489-a6d36d663b7a",
-      "explanation": "File is not known malicious at this time"
+      "pluginName": "BlockableRule:App uses camera or mic (1.0.0)",
+      "pluginUuid": "eed8f509-0046-4bdd-a39c-d12d7ca261d4",
+      "explanation": "Rule did not match"
+    },
+    {
+      "timestamp": "2025-08-18T17:35:41.308688547Z",
+      "goodUntil": "3000-12-25T00:00:00Z",
+      "txId": "addd8379-6ad9-449e-8351-078a36f9a987",
+      "allowed": true,
+      "decision": "DECISION_ALLOW",
+      "pluginName": "iTunes Store Plugin (1.0.0)",
+      "pluginUuid": "e0fb4e11-9b00-4c79-8876-eb01971cb708",
+      "explanation": "App (com.culturedcode.ThingsMac) has been on the App Store for more than a month",
+      "url": "https://apps.apple.com/us/app/things-3/id904280696?mt=12\u0026uo=4"
     }
   ]
 }
@@ -155,6 +191,9 @@ $ ./plugin-server
 2025/03/04 20:01:09 App Store URL:  https://apps.apple.com/us/app/things-3/id904280696?mt=12&uo=4
 2025/03/04 20:01:09 Good until:  3000-12-25 00:00:00 +0000 UTC
 ```
+
+This sets a Good until time far into the distant future as the binary will
+always be first published more than 30 days ago from now.
 
 ## Workflow Diagram
 

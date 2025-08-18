@@ -21,8 +21,8 @@ var (
 	apiKeyHeader = "X-API-Key"
 	validAPIKey  = "sekrit"
 
-	// This is a date in the distant future that ensures workshop can cache the
-	// result forever.
+	// This is a date in the distant future that ensures workshop can cache
+	// the result forever.
 	forever = time.Date(3000, 12, 25, 0, 0, 0, 0, time.UTC)
 )
 
@@ -33,8 +33,13 @@ const (
 	oneMonth = 30 * 24 * time.Hour
 )
 
+var (
+	debug    = flag.Bool("debug", false, "Enable debug logging")
+	useHTTPS = flag.Bool("https", false, "Enable HTTPS")
+	uuid     = flag.String("uuid", "e0fb4e11-9b00-4c79-8876-eb01971cb708", "Plugin UUID")
+)
+
 func main() {
-	useHTTPS := flag.Bool("https", false, "Enable HTTPS")
 	flag.Parse()
 
 	http.HandleFunc("/", EvaluateHandler)
@@ -145,15 +150,20 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
-                fmt.Println("ERROR: ", err)
+		if *debug {
+			fmt.Println("ERROR: ", err)
+		}
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
 
 	authzReq := &apipb.RemoteRiskEnginePluginServiceAuthorizeRequest{}
 	if err := protojson.Unmarshal(data, authzReq); err != nil {
-         	fmt.Println("ERROR BAD JSON: ", err)
-                fmt.Println(string(data))
+		if *debug {
+			fmt.Println("Malformed data")
+			fmt.Println(string(data))
+		}
+
 		http.Error(w, "Invalid JSON data", http.StatusBadRequest)
 		return
 	}
@@ -163,7 +173,7 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 
 	authzResp := &apipb.RemoteRiskEnginePluginServiceAuthorizeResponse{
 		Decision:    apipb.Decision_DECISION_ERROR,
-		PluginUuid:  "271b581e-498c-4ef0-95f2-57cdc6330e22",
+		PluginUuid:  *uuid,
 		TxId:        authzReq.TxId,
 		Explanation: &apipb.Explanation{Message: "Unknown"},
 	}
@@ -211,12 +221,12 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 			authzResp.Decision = apipb.Decision_DECISION_ERROR
 			authzResp.Error = "Malformed signing ID"
 			respBody, err := protojson.Marshal(authzResp)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		log.Printf("Server response: %s", string(respBody))
-		w.Write(respBody)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Server response: %s", string(respBody))
+			w.Write(respBody)
 			return
 		}
 
@@ -270,10 +280,13 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println()
 
 	respBody, err := protojson.Marshal(authzResp)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if *debug {
 		log.Printf("Server response: %s", string(respBody))
-		w.Write(respBody)
+	}
+	w.Write(respBody)
 }
