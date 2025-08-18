@@ -79,14 +79,14 @@ You should see your plugin matching:
         "name": "iTunes Store Plugin",
         "version": "1.0.0",
         "uuid": "e0fb4e11-9b00-4c79-8876-eb01971cb708",
-        "url": "https://f4e3fe45a4e8.ngrok-free.app",
+        "url": "https://plugin.example.com:8888",
         "headers": [
           {
             "key": "X-API-Key",
             "value": "sekrit"
           }
         ],
-        "ttl": "10s"
+        "ttl": "60s"
       }
     ]
   }
