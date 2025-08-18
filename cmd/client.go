@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -22,7 +21,7 @@ func main() {
 	ctx := context.Background()
 
 	// Read in the BinaryBlockable from blockable.json file
-	b, err := os.OpenFile("./testdata/blockable.json", os.O_RDONLY, 0)
+	b, err := os.OpenFile("./testdata/blockable_simple.json", os.O_RDONLY, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,7 +39,7 @@ func main() {
 
 	// Make a new AuthzRequest
 	now := time.Now()
-	req := &apipb.PluginAuthzRequest{
+	req := &apipb.RemoteRiskEnginePluginServiceAuthorizeRequest{
 		TxId:      "1234567890",
 		Blockable: blockable,
 		Timestamp: timestamppb.New(now),
@@ -79,11 +78,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var authzResp apipb.PluginAuthzResponse
-	err = json.Unmarshal(respBody, &authzResp)
+	var authzResp apipb.RemoteRiskEnginePluginServiceAuthorizeResponse
+	err = protojson.Unmarshal(respBody, &authzResp)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(string(respBody))
+	fmt.Printf("Plugin Response:\n")
+	fmt.Printf("  Transaction ID: %s\n", authzResp.TxId)
+	fmt.Printf("  Decision: %d\n", authzResp.Decision)
+	fmt.Printf("  Plugin UUID: %s\n", authzResp.PluginUuid)
+	if authzResp.Explanation != nil {
+		fmt.Printf("  Explanation: %s\n", authzResp.Explanation.Message)
+	}
 }
