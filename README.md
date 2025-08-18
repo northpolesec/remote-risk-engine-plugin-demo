@@ -3,7 +3,12 @@
 This repository shows how to write a **Remote Risk Engine** plugin
 for North Pole Security's [Workshop](https://northpole.security).
 
-This example plugin evaluates binaries based on their App Store presence. It verifies code signing information to confirm App Store origin and queries the iTunes Search API to determine the application's release date. The plugin implements a simple risk policy: applications released on the App Store less than 30 days ago are denied, while those with longer market presence are allowed.
+This example plugin evaluates binaries based on their App Store presence. It
+verifies code signing information to confirm App Store origin and queries the
+iTunes Search API to determine the application's release date. The plugin
+implements a simple risk policy: applications released on the App Store less
+than 30 days ago are denied, while those with longer market presence are
+allowed.
 
 > [!WARNING]
 > This code is intended only for demo purposes and should not be
@@ -33,11 +38,16 @@ The plugin server should now be listening on port 8888.
 
 ### Using the UI
 
-If you're using the UI, you can simply browse to the `/settings` page and click on Remote Risk Engine plugins tab and fill in the form.
+If you're using the UI, you can simply browse to the `/settings` page and click
+on Remote Risk Engine plugins tab and fill in the form.
 
 ### Via the API
 
-First, configure Workshop to use the plugin using the [`UpdateRiskEngineSettings` method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.UpdateRiskEngineSettings) using the JSON payload below changing `plugin.example.com` to the address you're plugin is running at. 
+First, configure Workshop to use the plugin using the
+[`UpdateRiskEngineSettings`
+method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.UpdateRiskEngineSettings)
+using the JSON payload below changing `plugin.example.com` to the address
+you're plugin is running at. 
 
 ```json
 {
@@ -56,7 +66,8 @@ First, configure Workshop to use the plugin using the [`UpdateRiskEngineSettings
 }
 ```
 
-Check that the settings were applied using the [`GetRiskEngineSettings` method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.UpdateRiskEngineSettings):
+Check that the settings were applied using the [`GetRiskEngineSettings`
+method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.UpdateRiskEngineSettings):
 
 ```shell
 $ grpcurl \
@@ -101,7 +112,7 @@ In the Workshop UI go to the Risk Engine card on the Settings page. Click `Test
 Configuration` and drag in an application. You should see your remote plugin
 being called in the list of Risk Engine Plugins.
 
-![](./docs/images/test-engine.png)
+![](./docs/images/test-risk-engine.png)
 
 
 ### Testing via the API
