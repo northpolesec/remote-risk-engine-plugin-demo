@@ -66,8 +66,8 @@ func main() {
 		// Redirect HTTP to HTTPS
 		http.ListenAndServe(":80", certManager.HTTPHandler(nil))
 	} else {
-		log.Println("Starting HTTP server on port 8888...")
-		http.ListenAndServe("0.0.0.0:8888", nil)
+		log.Println("Starting HTTP server on port 8080...")
+		http.ListenAndServe("0.0.0.0:8080", nil)
 	}
 }
 
@@ -157,7 +157,12 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if *debug {
+		log.Printf("Received request body: %s", string(data))
+	}
+
 	authzReq := &apipb.RemoteRiskEnginePluginServiceAuthorizeRequest{}
+
 	if err := protojson.Unmarshal(data, authzReq); err != nil {
 		if *debug {
 			fmt.Println("Malformed data")
@@ -168,7 +173,6 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check time.
 	w.Header().Set("Content-Type", "application/json")
 
 	authzResp := &apipb.RemoteRiskEnginePluginServiceAuthorizeResponse{
