@@ -14,7 +14,7 @@ COPY . .
 RUN go mod download
 
 # Build the server binary with specific flags
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server ./cmd/server.go
+RUN CGO_ENABLED=0 go build -o server ./cmd/server.go
 
 # Final stage using distroless
 FROM gcr.io/distroless/static-debian12
