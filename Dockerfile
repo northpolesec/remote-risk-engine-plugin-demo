@@ -1,3 +1,32 @@
+# Build stage
+FROM golang:1.24-alpine AS builder
+
+# Install ca-certificates for HTTPS support
+RUN apk add --no-cache ca-certificates git
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the server binary with specific flags
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server ./cmd/server.go
+
+# Final stage using distroless
 FROM gcr.io/distroless/static-debian12
-COPY app /app
+
+# Copy the binary from builder
+COPY --from=builder /app/server /app
+
+# Expose port
+EXPOSE 8080
+
+# Run the server
 ENTRYPOINT ["/app"]

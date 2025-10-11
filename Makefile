@@ -14,7 +14,7 @@ all: build push deploy
 # Build the static Go binary
 build:
 	@echo "Building static Go binary..."
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o app ./cmd/server.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o app ./cmd/server.go
 
 # Build and push container to Artifact Registry
 push:
