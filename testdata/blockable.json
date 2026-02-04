@@ -4,15 +4,15 @@
   "signing_id": "JLMPQHK86H:com.culturedcode.ThingsMac",
   "team_id": "JLMPQHK86H",
   "file_name": "Things3",
-  "signedBy": {
+  "signedBy": [{
     "sha256": "27006496b3bd92c2341ed4289f705fe7ef6e7c684fcc4c66cb1a5c7acd98cd3a",
     "commonName": "Apple Mac OS Application Signing",
     "organization": "Apple Inc.",
     "validFrom": "2024-07-12T23:16:07Z",
-    "valid_until": "2026-08-11T23:16:06Z",
+    "validUntil": "2026-08-11T23:16:06Z",
     "signedBy": "53fd008278e5a595fe1e908ae9c5e5675f26243264a5a6438c023e3ce2870760",
     "firstSeen": "2025-02-21T02:54:58.370070Z"
-  },
+  }],
   "entitlements": [
     {
       "key": "com.apple.security.app-sandbox",
