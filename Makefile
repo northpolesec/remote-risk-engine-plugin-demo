@@ -1,5 +1,5 @@
 # Configuration
-PROJECT_ID = your-project-here
+PROJECT_ID = remote-risk-engine-demo
 REGION = us-central1
 SERVICE_NAME = risk-engine
 IMAGE_NAME = itunes
@@ -14,7 +14,7 @@ all: build push deploy
 # Build the static Go binary
 build:
 	@echo "Building static Go binary..."
-	CGO_ENABLED=0 go build -a cgo -o app ./cmd/server.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o app ./cmd/server.go
 
 # Build and push container to Artifact Registry
 push:
