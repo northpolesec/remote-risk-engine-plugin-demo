@@ -202,6 +202,7 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the binary is signed by the App Store certificate
 	if len(signingCerts) == 0 || signingCerts[0].SignedBy != appStoreCertSha256 {
 		authzResp.Decision = apipb.Decision_DECISION_ALLOW
+		authzResp.GoodUntil = timestamppb.New(forever)
 		authzResp.Explanation.Message = "Binary is not not from the app store"
 		respBody, err := protojson.Marshal(authzResp)
 		if err != nil {
