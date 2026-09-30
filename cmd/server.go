@@ -1,12 +1,14 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -19,7 +21,8 @@ import (
 
 var (
 	apiKeyHeader = "X-API-Key"
-	validAPIKey  = "sekrit"
+	// Set API_KEY to override the default demo key.
+	validAPIKey = cmp.Or(os.Getenv("API_KEY"), "sekrit")
 
 	// This is a date in the distant future that ensures workshop can cache
 	// the result forever.
