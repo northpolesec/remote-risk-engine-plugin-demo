@@ -1,12 +1,14 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -19,7 +21,8 @@ import (
 
 var (
 	apiKeyHeader = "X-API-Key"
-	validAPIKey  = "sekrit"
+	// Set API_KEY to override the default demo key.
+	validAPIKey = cmp.Or(os.Getenv("API_KEY"), "sekrit")
 
 	// This is a date in the distant future that ensures workshop can cache
 	// the result forever.
@@ -163,9 +166,10 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 
 	authzReq := &apipb.RemoteRiskEnginePluginServiceAuthorizeRequest{}
 
-	if err := protojson.Unmarshal(data, authzReq); err != nil {
+	// Ignore fields added to the API after this plugin was built.
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(data, authzReq); err != nil {
 		if *debug {
-			fmt.Println("Malformed data")
+			fmt.Println("Malformed data:", err)
 			fmt.Println(string(data))
 		}
 
@@ -176,7 +180,7 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	authzResp := &apipb.RemoteRiskEnginePluginServiceAuthorizeResponse{
-		Decision:    apipb.Decision_DECISION_ERROR,
+		Decision:    apipb.RiskEngineDecision_DECISION_ERROR,
 		PluginUuid:  *uuid,
 		TxId:        authzReq.TxId,
 		Explanation: &apipb.Explanation{Message: "Unknown"},
@@ -184,7 +188,7 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the binary is from the iTunes Store.
 	if authzReq.Blockable == nil {
-		authzResp.Decision = apipb.Decision_DECISION_ERROR
+		authzResp.Decision = apipb.RiskEngineDecision_DECISION_ERROR
 		authzResp.Error = "Blockable is nil"
 		respBody, err := protojson.Marshal(authzResp)
 		if err != nil {
@@ -201,7 +205,7 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the binary is signed by the App Store certificate
 	if len(signingCerts) == 0 || signingCerts[0].SignedBy != appStoreCertSha256 {
-		authzResp.Decision = apipb.Decision_DECISION_ALLOW
+		authzResp.Decision = apipb.RiskEngineDecision_DECISION_ALLOW
 		authzResp.GoodUntil = timestamppb.New(forever)
 		authzResp.Explanation.Message = "Binary is not not from the app store"
 		respBody, err := protojson.Marshal(authzResp)
@@ -223,7 +227,7 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 	} else if len(bundleID) > 11 {
 		bundleIDParts := strings.Split(bundleID, ":")
 		if len(bundleIDParts) < 2 {
-			authzResp.Decision = apipb.Decision_DECISION_ERROR
+			authzResp.Decision = apipb.RiskEngineDecision_DECISION_ERROR
 			authzResp.Error = "Malformed signing ID"
 			respBody, err := protojson.Marshal(authzResp)
 			if err != nil {
@@ -237,7 +241,7 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 
 		bundleID = strings.Join(bundleIDParts[1:], ":")
 	} else {
-		authzResp.Decision = apipb.Decision_DECISION_ERROR
+		authzResp.Decision = apipb.RiskEngineDecision_DECISION_ERROR
 		authzResp.Error = "Invalid bundle ID"
 		respBody, err := protojson.Marshal(authzResp)
 		if err != nil {
@@ -253,7 +257,7 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		authzResp.GoodUntil = timestamppb.New(time.Time{})
-		authzResp.Decision = apipb.Decision_DECISION_ERROR
+		authzResp.Decision = apipb.RiskEngineDecision_DECISION_ERROR
 		authzResp.Error = err.Error()
 		respBody, err := protojson.Marshal(authzResp)
 		if err != nil {
@@ -271,9 +275,9 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 	authzResp.Explanation.Message = msg
 
 	if match {
-		authzResp.Decision = apipb.Decision_DECISION_DENY
+		authzResp.Decision = apipb.RiskEngineDecision_DECISION_DENY
 	} else {
-		authzResp.Decision = apipb.Decision_DECISION_ALLOW
+		authzResp.Decision = apipb.RiskEngineDecision_DECISION_ALLOW
 	}
 
 	log.Println("Binary: ", authzReq.Blockable.FileName)

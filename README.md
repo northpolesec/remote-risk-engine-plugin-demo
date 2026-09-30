@@ -34,6 +34,14 @@ $ ./plugin-server
 
 The plugin server should now be listening on port 8888.
 
+The server expects requests to include an `X-API-Key` header. It defaults to
+`sekrit`; set the `API_KEY` environment variable to use a different key:
+
+```sh
+$ API_KEY=<your-key> ./plugin-server
+$ docker run -e API_KEY=<your-key> -p 8080:8080 <image>
+```
+
 ## Enable the Plugin
 
 ### Using the UI
