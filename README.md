@@ -14,8 +14,7 @@ allowed.
 > This code is intended only for demo purposes and should not be
 considered production ready.
 >
-> The iTunes Search API is limited to 20 queries per minute and
-> this server uses hard coded secrets.
+> The iTunes Search API is limited to 20 queries per minute.
 
 ## Prerequisites
 
@@ -34,12 +33,17 @@ $ ./plugin-server
 
 The plugin server should now be listening on port 8888.
 
-The server expects requests to include an `X-API-Key` header. It defaults to
-`sekrit`; set the `API_KEY` environment variable to use a different key:
+The server verifies that each request came from Workshop. Workshop signs the
+request body with HMAC-SHA256, keyed with the plugin's signing secret, and
+sends the base64 result in the `X-Signature` header. The server rejects
+requests with a bad signature or a passed `deadline`.
+
+Set the `SIGNING_SECRET` environment variable to the plugin's hex-encoded
+signing secret (see [Enable the Plugin](#enable-the-plugin)):
 
 ```sh
-$ API_KEY=<your-key> ./plugin-server
-$ docker run -e API_KEY=<your-key> -p 8080:8080 <image>
+$ SIGNING_SECRET=<secret> ./plugin-server
+$ docker run -e SIGNING_SECRET=<secret> -p 8080:8080 <image>
 ```
 
 ## Enable the Plugin
@@ -47,7 +51,8 @@ $ docker run -e API_KEY=<your-key> -p 8080:8080 <image>
 ### Using the UI
 
 If you're using the UI, you can simply browse to the `/settings` page and click
-on Remote Risk Engine plugins tab and fill in the form.
+on Remote Risk Engine plugins tab and fill in the form. After saving, click
+**Copy Secret** and pass that value to the plugin as `SIGNING_SECRET`.
 
 ### Via the API
 
@@ -67,15 +72,18 @@ you're plugin is running at.
       "name": "demo",
       "version": "0.0.1",
       "url": "https://plugin.example.com:8888",
-      "headers": [{"key": "X-API-Key", "value": "sekrit"}],
       "ttl": "120.0s"
     }
   ]
 }
 ```
 
+Workshop generates a signing secret for the plugin when you save. To use your
+own, set `secret` to a hex-encoded value of at least 32 bytes.
+
 Check that the settings were applied using the [`GetRiskEngineSettings`
-method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.UpdateRiskEngineSettings):
+method](https://buf.build/northpolesec/workshop-api/docs/main:workshop.v1#workshop.v1.WorkshopService.UpdateRiskEngineSettings)
+and copy the plugin's `secret` into `SIGNING_SECRET`:
 
 ```shell
 $ grpcurl \
@@ -99,12 +107,7 @@ You should see your plugin matching:
         "version": "1.0.0",
         "uuid": "e0fb4e11-9b00-4c79-8876-eb01971cb708",
         "url": "https://plugin.example.com:8888",
-        "headers": [
-          {
-            "key": "X-API-Key",
-            "value": "sekrit"
-          }
-        ],
+        "secret": "<hex-encoded signing secret>",
         "ttl": "60s"
       }
     ]

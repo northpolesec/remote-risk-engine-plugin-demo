@@ -3,6 +3,10 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -19,6 +23,11 @@ import (
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	ctx := context.Background()
+
+	secret, err := hex.DecodeString(os.Getenv("SIGNING_SECRET"))
+	if err != nil || len(secret) == 0 {
+		log.Fatal("SIGNING_SECRET must be set to the hex-encoded signing secret")
+	}
 
 	// Read in the BinaryBlockable from blockable.json file
 	b, err := os.OpenFile("./testdata/blockable_simple.json", os.O_RDONLY, 0)
@@ -60,9 +69,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Set the content type and custom headers
+	// Sign the body the same way Workshop does.
+	mac := hmac.New(sha256.New, secret)
+	mac.Write(reqBody)
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-API-Key", "sekrit")
+	httpReq.Header.Set("X-Signature", base64.StdEncoding.EncodeToString(mac.Sum(nil)))
 
 	// Make the HTTP request
 	client := &http.Client{}
