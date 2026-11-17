@@ -37,6 +37,9 @@ const (
 	appStoreCertSha256 = "53fd008278e5a595fe1e908ae9c5e5675f26243264a5a6438c023e3ce2870760"
 
 	oneMonth = 30 * 24 * time.Hour
+
+	// maxBodyBytes is far above a real authorize request, which is a few KB.
+	maxBodyBytes = 1 << 20
 )
 
 var (
@@ -166,6 +169,8 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cap the body before verify reads it, so unsigned requests can't exhaust memory.
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 	data, ok := verify(r, signingSecret)
 	if !ok {
 		http.Error(w, "Invalid signature", http.StatusUnauthorized)
