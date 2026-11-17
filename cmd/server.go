@@ -22,8 +22,6 @@ import (
 	apipb "buf.build/gen/go/northpolesec/workshop-api/protocolbuffers/go/workshop/v1"
 )
 
-const signatureHeader = "X-Signature"
-
 // signingSecret is the hex-decoded plugin secret from Workshop, used to verify
 // X-Signature.
 var signingSecret []byte
@@ -149,16 +147,17 @@ func CheckiTunesStore(bundleID string) (bool, string, time.Time, string, error) 
 	}
 }
 
-// validSignature reports whether sig is the base64 HMAC-SHA256 of body keyed
-// with signingSecret.
-func validSignature(body []byte, sig string) bool {
-	got, err := base64.StdEncoding.DecodeString(sig)
+// verify checks X-Signature against the hex-decoded secret. When it returns
+// true, parse the body and reject the request if its deadline has passed.
+func verify(r *http.Request, secret []byte) ([]byte, bool) {
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return false
+		return nil, false
 	}
-	mac := hmac.New(sha256.New, signingSecret)
+	mac := hmac.New(sha256.New, secret)
 	mac.Write(body)
-	return hmac.Equal(got, mac.Sum(nil))
+	want := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	return body, hmac.Equal([]byte(want), []byte(r.Header.Get("X-Signature")))
 }
 
 func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
@@ -167,17 +166,8 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		if *debug {
-			fmt.Println("ERROR: ", err)
-		}
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
-		return
-	}
-
-	// Verify the raw body before parsing it.
-	if !validSignature(data, r.Header.Get(signatureHeader)) {
+	data, ok := verify(r, signingSecret)
+	if !ok {
 		http.Error(w, "Invalid signature", http.StatusUnauthorized)
 		return
 	}
