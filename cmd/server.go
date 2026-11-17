@@ -1,8 +1,12 @@
 package main
 
 import (
-	"cmp"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -19,11 +23,11 @@ import (
 	apipb "buf.build/gen/go/northpolesec/workshop-api/protocolbuffers/go/workshop/v1"
 )
 
-var (
-	apiKeyHeader = "X-API-Key"
-	// Set API_KEY to override the default demo key.
-	validAPIKey = cmp.Or(os.Getenv("API_KEY"), "sekrit")
+// signingSecret is the hex-decoded plugin secret from Workshop, used to verify
+// X-Signature.
+var signingSecret []byte
 
+var (
 	// This is a date in the distant future that ensures workshop can cache
 	// the result forever.
 	forever = time.Date(3000, 12, 25, 0, 0, 0, 0, time.UTC)
@@ -34,6 +38,9 @@ const (
 	appStoreCertSha256 = "53fd008278e5a595fe1e908ae9c5e5675f26243264a5a6438c023e3ce2870760"
 
 	oneMonth = 30 * 24 * time.Hour
+
+	// maxBodyBytes caps how much of an unverified body the plugin reads.
+	maxBodyBytes = 1 << 20
 )
 
 var (
@@ -44,6 +51,12 @@ var (
 
 func main() {
 	flag.Parse()
+
+	var err error
+	signingSecret, err = hex.DecodeString(os.Getenv("SIGNING_SECRET"))
+	if err != nil || len(signingSecret) < 32 {
+		log.Fatal("SIGNING_SECRET must be the plugin's hex-encoded signing secret from Workshop (at least 32 bytes)")
+	}
 
 	http.HandleFunc("/", EvaluateHandler)
 
@@ -138,25 +151,36 @@ func CheckiTunesStore(bundleID string) (bool, string, time.Time, string, error) 
 	}
 }
 
-func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
-	// Check for API key
-	apiKey := r.Header.Get(apiKeyHeader)
-	if apiKey != validAPIKey {
-		http.Error(w, "Invalid API Key", http.StatusUnauthorized)
-		return
+// verify reads the request body and checks X-Signature against the
+// hex-decoded secret. It returns the body and http.StatusOK, or the status to
+// reject the request with.
+func verify(w http.ResponseWriter, r *http.Request, secret []byte) ([]byte, int) {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
+	if err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			return nil, http.StatusRequestEntityTooLarge
+		}
+		return nil, http.StatusBadRequest
 	}
+	mac := hmac.New(sha256.New, secret)
+	mac.Write(body)
+	want := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	if !hmac.Equal([]byte(want), []byte(r.Header.Get("X-Signature"))) {
+		return nil, http.StatusUnauthorized
+	}
+	return body, http.StatusOK
+}
 
+func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST is allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		if *debug {
-			fmt.Println("ERROR: ", err)
-		}
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+	data, status := verify(w, r, signingSecret)
+	if status != http.StatusOK {
+		http.Error(w, http.StatusText(status), status)
 		return
 	}
 
@@ -174,6 +198,12 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		http.Error(w, "Invalid JSON data", http.StatusBadRequest)
+		return
+	}
+
+	// The deadline is signed, so rejecting expired requests limits replays.
+	if !time.Now().Before(authzReq.GetDeadline().AsTime()) {
+		http.Error(w, "Request deadline has passed", http.StatusBadRequest)
 		return
 	}
 
