@@ -35,8 +35,12 @@ The plugin server should now be listening on port 8888.
 
 The server verifies that each request came from Workshop. Workshop signs the
 request body with HMAC-SHA256, keyed with the plugin's signing secret, and
-sends the base64 result in the `X-Signature` header. The server rejects
-requests with a bad signature or a passed `deadline`.
+sends the base64 result in the `X-Signature` header. The server rejects a
+request with:
+
+- `413` if the body is over 1 MiB.
+- `401` if the signature doesn't match.
+- `400` if the body can't be read or parsed, or its `deadline` has passed.
 
 Set the `SIGNING_SECRET` environment variable to the plugin's hex-encoded
 signing secret (see [Enable the Plugin](#enable-the-plugin)):

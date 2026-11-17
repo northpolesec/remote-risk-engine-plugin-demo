@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -38,7 +39,7 @@ const (
 
 	oneMonth = 30 * 24 * time.Hour
 
-	// maxBodyBytes is far above a real authorize request, which is a few KB.
+	// maxBodyBytes caps how much of an unverified body the plugin reads.
 	maxBodyBytes = 1 << 20
 )
 
@@ -150,17 +151,25 @@ func CheckiTunesStore(bundleID string) (bool, string, time.Time, string, error) 
 	}
 }
 
-// verify checks X-Signature against the hex-decoded secret. When it returns
-// true, parse the body and reject the request if its deadline has passed.
-func verify(r *http.Request, secret []byte) ([]byte, bool) {
-	body, err := io.ReadAll(r.Body)
+// verify reads the request body and checks X-Signature against the
+// hex-decoded secret. It returns the body and http.StatusOK, or the status to
+// reject the request with.
+func verify(w http.ResponseWriter, r *http.Request, secret []byte) ([]byte, int) {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
 	if err != nil {
-		return nil, false
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			return nil, http.StatusRequestEntityTooLarge
+		}
+		return nil, http.StatusBadRequest
 	}
 	mac := hmac.New(sha256.New, secret)
 	mac.Write(body)
 	want := base64.StdEncoding.EncodeToString(mac.Sum(nil))
-	return body, hmac.Equal([]byte(want), []byte(r.Header.Get("X-Signature")))
+	if !hmac.Equal([]byte(want), []byte(r.Header.Get("X-Signature"))) {
+		return nil, http.StatusUnauthorized
+	}
+	return body, http.StatusOK
 }
 
 func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
@@ -169,11 +178,9 @@ func EvaluateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Cap the body before verify reads it, so unsigned requests can't exhaust memory.
-	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
-	data, ok := verify(r, signingSecret)
-	if !ok {
-		http.Error(w, "Invalid signature", http.StatusUnauthorized)
+	data, status := verify(w, r, signingSecret)
+	if status != http.StatusOK {
+		http.Error(w, http.StatusText(status), status)
 		return
 	}
 
